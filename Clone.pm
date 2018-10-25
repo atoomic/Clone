@@ -15,6 +15,19 @@ $VERSION = '0.40';
 
 bootstrap Clone $VERSION;
 
+my $save = \&clone;
+
+use Carp;
+
+no warnings;
+*clone = sub {
+
+    print "clone called... ".  Carp::longmess();
+
+    return $save->( @_ );
+
+};
+
 1;
 __END__
 
