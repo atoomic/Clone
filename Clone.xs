@@ -176,9 +176,9 @@ sv_clone (SV * ref, HV* hseen, int depth)
 */
 #if PERL_VERSION >= 20 && !defined(PERL_DEBUG_READONLY_COW)
         /* only for simple PVs unblessed */
-        if ( SvIsCOW(ref) && !SvOOK(ref) && SvLEN(ref) > 0 ) {
+        if ( SvIsCOW(ref) && !SvOOK(ref) ) {
 
-          if ( CowREFCNT(ref) < (SV_COW_REFCNT_MAX - 1) ) {
+          if ( CowREFCNT(ref) < (SV_COW_REFCNT_MAX - 1) && SvLEN(ref) != 0 ) {
             /* cannot use newSVpv_share as this going to use a new PV we do not want to clone it */
             /* create a fresh new PV */
             clone = newSV(0);
@@ -198,7 +198,9 @@ sv_clone (SV * ref, HV* hseen, int depth)
             if (SvUTF8(ref))
               SvUTF8_on(clone);
           } else {
-            /* we are above SV_COW_REFCNT_MAX, create a new SvPV but preserve the COW */
+            /* we are above SV_COW_REFCNT_MAX or SvLEN = 0,
+            *  both cases deserve a new SvPV with COW flag enable and CowRefcnt=1
+            */
             clone = newSVsv (ref);
             SvIsCOW_on(clone);
             CowREFCNT(clone) = 0; /* set the CowREFCNT to 0 */
