@@ -76,11 +76,11 @@ plan tests => 59;
 
         my $clone_key = clone($k);
         {
-            # preserving the COW status when LEN=0 but also resetting the COW counter to 1
+            # preserving the COW status when LEN=0 but also resetting the COW counter to 0
             ok is_cow($clone_key), "clone_key preserve the COW flag when LEN=0";
-            is cowrefcnt($clone_key), 1, "clone_key CowRefcnt reset to 1";
+            is cowrefcnt($clone_key), 0, "clone_key CowRefcnt reset to 0" or die;
         }
-        is $clone_key, $k, " clone_key eq k";
+        ok $clone_key eq $k, " clone_key eq k";
     }
 
     my @keys       = sort keys %$h;

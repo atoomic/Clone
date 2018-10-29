@@ -177,8 +177,7 @@ sv_clone (SV * ref, HV* hseen, int depth)
 #if PERL_VERSION >= 20 && !defined(PERL_DEBUG_READONLY_COW)
         /* only for simple PVs unblessed */
         if ( SvIsCOW(ref) && !SvOOK(ref) ) {
-
-          if ( CowREFCNT(ref) < (SV_COW_REFCNT_MAX - 1) && SvLEN(ref) != 0 ) {
+          if ( SvLEN(ref) != 0 && CowREFCNT(ref) < (SV_COW_REFCNT_MAX - 1) ) {
             /* cannot use newSVpv_share as this going to use a new PV we do not want to clone it */
             /* create a fresh new PV */
             clone = newSV(0);
@@ -201,9 +200,18 @@ sv_clone (SV * ref, HV* hseen, int depth)
             /* we are above SV_COW_REFCNT_MAX or SvLEN = 0,
             *  both cases deserve a new SvPV with COW flag enable and CowRefcnt=1
             */
-            clone = newSVsv (ref);
-            SvIsCOW_on(clone);
-            CowREFCNT(clone) = 0; /* set the CowREFCNT to 0 */
+            if ( SvLEN(ref) == 0 ) {
+              clone = newSVsv (ref);
+              printf( "LEN %d vs %d\n Flags: %0x vs %0x PV: %p vs %p PVS: %s vs %s\n", SvLEN(ref), SvLEN(clone), SvFLAGS(ref), SvFLAGS(clone), SvPVX(ref), SvPVX(clone), SvPVX(ref), SvPVX(clone) );
+              SvLEN(clone) = 0;
+              //SvIsCOW_on(clone);
+              //CowREFCNT(clone) = 0; /* set the CowREFCNT to 0 */
+
+            } else {
+              clone = newSVsv (ref);
+              SvIsCOW_on(clone);
+              CowREFCNT(clone) = 0; /* set the CowREFCNT to 0 */
+            }
           }
 
         } else {
