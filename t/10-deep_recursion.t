@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 7;
+use Test::More tests => 10;
 use Clone qw(clone);
 use Config;
 
@@ -107,5 +107,45 @@ my $moderate_target  = 1000;
         }
         is_deeply($walk, ["leaf_a", "leaf_b"],
                   "Leaf multi-element array should be cloned correctly");
+    }
+}
+
+# Test 8-10: Deep hashref chain emits warning at shallow-clone fallback
+# Hashrefs don't have an iterative fallback path, so when rdepth exceeds
+# MAX_DEPTH, Clone returns a shallow copy and must warn about it.
+{
+    # Build a hashref chain deeper than MAX_DEPTH.  Each nesting adds 2 rdepth
+    # increments (RV + HV), so we need MAX_DEPTH/2 + some margin.
+    # MAX_DEPTH is 2000 on Win/Cygwin, 4000 elsewhere.
+    my $max_depth_est = $is_limited_stack ? 2000 : 4000;
+    my $hash_depth = int($max_depth_est / 2) + 500;
+
+    my $deep_hash = {};
+    my $curr = $deep_hash;
+    for (1..$hash_depth) {
+        my $next = {};
+        $curr->{child} = $next;
+        $curr = $next;
+    }
+    $curr->{leaf} = "deep_value";
+
+    my @warnings;
+    my $cloned = eval {
+        local $SIG{__WARN__} = sub { push @warnings, $_[0] };
+        clone($deep_hash);
+    };
+
+    ok(!$@, "Cloning deep hashref chain ($hash_depth levels) should not die")
+        or diag("Error: $@");
+
+    ok(scalar(@warnings) > 0,
+       "Should emit warning about shallow copy for deep hashref chain")
+        or diag("Expected warnings about shallow clone fallback, got none");
+
+    SKIP: {
+        skip "No warnings captured", 1 unless @warnings;
+        like($warnings[0],
+             qr/Clone: recursive limit exceeded.*shallow copy/,
+             "Warning message should describe the shallow-copy fallback");
     }
 }
