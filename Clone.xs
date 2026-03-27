@@ -268,7 +268,10 @@ sv_clone (SV * ref, HV* hseen, int depth, int rdepth, AV * weakrefs)
                 sv_bless(clone_rv, SvSTASH(SvRV(ref)));
             return clone_rv;
         }
-        /* For other types, just return a reference to avoid stack overflow */
+        /* For other types, return a shallow copy to avoid stack overflow,
+         * but warn so the user knows the clone is incomplete. */
+        Perl_warn(aTHX_ "Clone: recursive limit exceeded at depth %d; "
+                  "shallow copy returned for non-array type", rdepth);
         return SvREFCNT_inc(ref);
     }
 
